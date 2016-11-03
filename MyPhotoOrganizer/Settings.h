@@ -9,8 +9,10 @@ public:
 	~CSettings();
 	void addExtension(CString extStr);
 	void setStartPath(CString startpathStr);
+	CString getStartPath();
 private:
 	std::vector <CString> extensionsArray;
 	CString startPath;
+
 };
 

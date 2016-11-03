@@ -12,6 +12,9 @@ using namespace std;
 
 CString GetPathToExeFileFolder();
 int ReadStandardFileToMemmory(CSettings *appSettings);
+bool dirExists(const std::string& dirName_in);
+void promtForStartPath(CSettings *appSettings);
+void promtForExtensions(CSettings *appSettings);
 
 int main(int argv, char* args[])
 {
@@ -28,8 +31,12 @@ int main(int argv, char* args[])
 	CSettings appSettings = CSettings();
 	ReadStandardFileToMemmory(&appSettings);
 
+	//==============================================================================
 	//we prompt for start folder,
 	// from where we start search files
+	promtForStartPath(&appSettings);
+
+	//==============================================================================
 
 	// then we display extensions of files we gonna search saved in ini file
 
@@ -149,4 +156,115 @@ int ReadStandardFileToMemmory(CSettings *appSettings)
 	standardFileRead.close();
 
 	return 1;
+}
+
+
+bool dirExists(const std::string& dirName_in)
+{
+	DWORD ftyp = GetFileAttributesA(dirName_in.c_str());
+	if (ftyp == INVALID_FILE_ATTRIBUTES)
+	{
+		cout << "Error: NO SUCH FOLDER!!!" << endl;
+		return false;  //something is wrong with your path!
+	}
+
+	if (ftyp & FILE_ATTRIBUTE_DIRECTORY)
+		return true;   // this is a directory!
+
+	return false;    // this is not a directory!
+}
+
+
+void promtForStartPath(CSettings *appSettings)
+{
+	string startPath;
+	string answer;
+	bool folderExists = false;
+	bool answerRezult = false;
+
+	//	Get root directory -  prompt the start folder
+
+	do
+	{
+		wcout << "Please enter the path to folder to start search from." << endl;
+		_tprintf(_T("Star folder[%s]:"), (LPCTSTR)appSettings->getStartPath());
+		getline(cin, startPath);
+
+		if (startPath != "")
+		{
+			cout << "You have entered this path:" << endl;
+			cout << startPath << endl;
+			wcout << "Is it correct (Y/N)?";
+			getline(cin, answer);
+		}
+		else
+		{
+			return;
+		}
+
+		if (answer == "n")
+		{
+			answerRezult = false;
+			continue;
+		}
+		if (answer == "y")
+		{
+			answerRezult = true;
+		}
+
+		answerRezult = dirExists(startPath);
+
+	} while (!answerRezult);
+
+	appSettings->setStartPath(answer.c_str());
+	return;
+}
+
+
+void promtForExtensions(CSettings *appSettings)
+{
+	string extensions;
+	string answer;
+	bool answerRezult = false;
+
+	//	Get list of extensions -  prompt the extensions of files to search
+
+	do
+	{
+		wcout << "Please enter extensions of files separated by ';'" << endl;
+
+
+
+		_tprintf(_T("Star folder[%s]:"), (LPCTSTR)appSettings->getStartPath());
+		getline(cin, startPath);
+
+		if (startPath != "")
+		{
+			cout << "You have entered this path:" << endl;
+			cout << startPath << endl;
+			wcout << "Is it correct (Y/N)?";
+			getline(cin, answer);
+		}
+		else
+		{
+			return;
+		}
+
+		if (answer == "n")
+		{
+			answerRezult = false;
+			continue;
+		}
+		if (answer == "y")
+		{
+			answerRezult = true;
+		}
+
+		answerRezult = dirExists(startPath);
+
+	} while (!answerRezult);
+
+	appSettings->setStartPath(answer.c_str());
+	return;
+
 }
