@@ -35,7 +35,7 @@ int main(int argv, char* args[])
 	//we prompt for start folder,
 	// from where we start search files
 	promtForStartPath(&appSettings);
-
+	promtForExtensions(&appSettings);
 	//==============================================================================
 
 	// then we display extensions of files we gonna search saved in ini file
@@ -232,16 +232,25 @@ void promtForExtensions(CSettings *appSettings)
 	do
 	{
 		wcout << "Please enter extensions of files separated by ';'" << endl;
+		std::vector <CString> localExtensionsArr = appSettings->getExtensionsArray();
+		
+		CString extensionsFromIni= "";
 
-
-
-		_tprintf(_T("Star folder[%s]:"), (LPCTSTR)appSettings->getStartPath());
-		getline(cin, startPath);
-
-		if (startPath != "")
+		for (std::vector<CString>::iterator it = localExtensionsArr.begin(); it != localExtensionsArr.end(); ++it)
 		{
-			cout << "You have entered this path:" << endl;
-			cout << startPath << endl;
+			extensionsFromIni += ((CString)*it + L";");
+		}
+
+		//int numElements = localExtensionsArr.size();
+
+		_tprintf(_T("Star folder[%s]:"), (LPCTSTR)extensionsFromIni);
+
+		getline(cin, extensions);
+
+		if (extensions != "")
+		{
+			cout << "You have entered this extension(s):" << endl;
+			cout << extensions << endl;
 			wcout << "Is it correct (Y/N)?";
 			getline(cin, answer);
 		}
@@ -260,11 +269,14 @@ void promtForExtensions(CSettings *appSettings)
 			answerRezult = true;
 		}
 
-		answerRezult = dirExists(startPath);
+		//verify here format of entered extensions
+		//answerRezult = checkFormatExtensions(extensions);
 
 	} while (!answerRezult);
 
-	appSettings->setStartPath(answer.c_str());
+	// save extensions in settings
+	//appSettings->setStartPath(answer.c_str());
+
 	return;
 
 }

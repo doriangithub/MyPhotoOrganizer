@@ -28,3 +28,9 @@ CString CSettings::getStartPath()
 {
 	return this->startPath;
 }
+
+
+std::vector <CString> CSettings::getExtensionsArray()
+{
+	return this->extensionsArray;
+}

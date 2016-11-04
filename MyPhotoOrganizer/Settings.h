@@ -10,6 +10,7 @@ public:
 	void addExtension(CString extStr);
 	void setStartPath(CString startpathStr);
 	CString getStartPath();
+	std::vector <CString> getExtensionsArray();
 private:
 	std::vector <CString> extensionsArray;
 	CString startPath;
