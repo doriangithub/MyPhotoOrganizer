@@ -11,7 +11,7 @@ using namespace std;
 
 
 CString GetPathToExeFileFolder();
-int ReadStandardFileToMemmory(CSettings *appSettings);
+int ReadIniFileToMemmory(CSettings *appSettings);
 bool dirExists(const std::string& dirName_in);
 void promtForStartPath(CSettings *appSettings);
 void promtForExtensions(CSettings *appSettings);
@@ -29,17 +29,17 @@ int main(int argv, char* args[])
 
 	// if database is opened successfully, read ini file
 	CSettings appSettings = CSettings();
-	ReadStandardFileToMemmory(&appSettings);
+	ReadIniFileToMemmory(&appSettings);
 
 	//==============================================================================
 	//we prompt for start folder,
 	// from where we start search files
 	promtForStartPath(&appSettings);
-	promtForExtensions(&appSettings);
+	
 	//==============================================================================
 
 	// then we display extensions of files we gonna search saved in ini file
-
+	promtForExtensions(&appSettings);
 
 
 
@@ -70,9 +70,8 @@ CString GetPathToExeFileFolder()
 }
 
 
-int ReadStandardFileToMemmory(CSettings *appSettings)
+int ReadIniFileToMemmory(CSettings *appSettings)
 {
-
 	CString pathToExeFileFolder = GetPathToExeFileFolder();
 	CString pathToIniFile = pathToExeFileFolder + "\\settings.ini";
 	ifstream standardFileRead(pathToIniFile);
@@ -86,8 +85,6 @@ int ReadStandardFileToMemmory(CSettings *appSettings)
 	//ChangeStatusText(_T("Reading standards to memmory"));
 
 	// read standards file to memmory
-
-	// ReadStandardsFileToArray();
 	string line;
 
 	string partOfLine;
@@ -100,6 +97,7 @@ int ReadStandardFileToMemmory(CSettings *appSettings)
 	CString strKeyValue;
 	unsigned lengthLine;
 	unsigned found;
+	int stringLength;
 
 	while (standardFileRead.good())
 	{
@@ -124,13 +122,23 @@ int ReadStandardFileToMemmory(CSettings *appSettings)
 						{
 							appSettings->addExtension(value);
 						}
-						csLine = csLine.Right(found);
-						found = csLine.Find(L";");
+						stringLength = csLine.GetLength();
+						if ((found + 1) < stringLength)
+						{
+							csLine = csLine.Right(found + 1);
+							found = csLine.Find(L";");
+						}
+						else
+						{
+							csLine = L"";
+							found = csLine.Find(L";");
+						}
+
 					}
-					if (csLine.Compare(L"") != 0)
-					{
-						appSettings->addExtension(csLine);
-					}
+					//if (csLine.Compare(L"") != 0)
+					//{
+					//	appSettings->addExtension(csLine);
+					//}
 
 
 				}
@@ -274,9 +282,47 @@ void promtForExtensions(CSettings *appSettings)
 
 	} while (!answerRezult);
 
-	// save extensions in settings
-	//appSettings->setStartPath(answer.c_str());
+	unsigned found;
+	CString value;
+	int stringLength;
+
+	if (extensions.length() != 0)
+	{
+		// delete existing list
+		appSettings->deleteExtensionsList();
+
+		CString csLine(extensions.c_str());
+		found = csLine.Find(L";");
+		while (found != -1)
+		{
+			value = csLine.Left(found);
+			if (value.Compare(L"") != 0)
+			{
+				appSettings->addExtension(value);
+			}
+			stringLength = csLine.GetLength();
+			if ((found + 1) < stringLength)
+			{
+				csLine = csLine.Right(found + 1);
+				found = csLine.Find(L";");
+			}
+			else
+			{
+				csLine = L"";
+				found = csLine.Find(L";");
+			}
+
+		}
+		if (csLine.Compare(L"") != 0)
+		{
+			appSettings->addExtension(csLine);
+		}
+	}
+
+	std::vector <CString> localExtensionsArr = appSettings->getExtensionsArray();
 
 	return;
 
 }
+
+

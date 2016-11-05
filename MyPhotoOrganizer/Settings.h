@@ -8,6 +8,7 @@ public:
 	CSettings();
 	~CSettings();
 	void addExtension(CString extStr);
+	void deleteExtensionsList();
 	void setStartPath(CString startpathStr);
 	CString getStartPath();
 	std::vector <CString> getExtensionsArray();

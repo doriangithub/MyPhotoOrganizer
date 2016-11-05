@@ -34,3 +34,9 @@ std::vector <CString> CSettings::getExtensionsArray()
 {
 	return this->extensionsArray;
 }
+
+
+void CSettings::deleteExtensionsList()
+{
+	this->extensionsArray.clear();
+}
