@@ -15,7 +15,13 @@ int ReadIniFileToMemmory(CSettings *appSettings);
 bool dirExists(const std::string& dirName_in);
 void promtForStartPath(CSettings *appSettings);
 void promtForExtensions(CSettings *appSettings);
+void RecurseSearch(TCHAR* path, CSettings *appSettings);
+bool hasExtension(const WCHAR* fileName, CSettings *appSettings);
 
+
+/***********************************************************************************************/
+/*	Main function of application My Photo Organizer                                            */
+/***********************************************************************************************/
 int main(int argv, char* args[])
 {
 	CFilesDB photosDB = CFilesDB();
@@ -32,22 +38,44 @@ int main(int argv, char* args[])
 	ReadIniFileToMemmory(&appSettings);
 
 	//==============================================================================
-	//we prompt for start folder,
-	// from where we start search files
+	// we prompt for start folder, from where we start search files
 	promtForStartPath(&appSettings);
 	
 	//==============================================================================
-
-	// then we display extensions of files we gonna search saved in ini file
+	// we prompt for extensions of files we gonna search saved in ini file
 	promtForExtensions(&appSettings);
 
+	//==============================================================================
+	// print cirent settings for debug purpose
+	CString currentStartPath =  (LPCTSTR)appSettings.getStartPath();
+
+	std::vector <CString> currentExtensionsArr = appSettings.getExtensionsArray();
+	CString currentExtensionsList = "";
+	for (std::vector<CString>::iterator it = currentExtensionsArr.begin(); it != currentExtensionsArr.end(); ++it)
+	{
+		currentExtensionsList += ((CString)*it + L";");
+	}
+	
+	_tprintf(_T("Current star folder[%s]\n"), currentStartPath);
+	_tprintf(_T("Current extensions list[%s]:\n"), currentExtensionsList);
+	
+	//===============================================================================
+	// Start recursevly search files in all subdirectories
+
+	TCHAR* currentStartPathTchar = new TCHAR[currentStartPath.GetLength() + 1];
+	lstrcpy(currentStartPathTchar, currentStartPath);
+	RecurseSearch(currentStartPathTchar, &appSettings);
+	delete[]currentStartPathTchar;
 
 
-
+	system("pause");
 	return 1;
 }
 
 
+/***********************************************************************************************/
+/*	Utility function returns path to application's exe file                                    */
+/***********************************************************************************************/
 CString GetPathToExeFileFolder()
 {
 	// getting location of this exe file to get the path of working folder
@@ -70,6 +98,9 @@ CString GetPathToExeFileFolder()
 }
 
 
+/***********************************************************************************************/
+/*	Function reads ini file and stores settings in class CSettings                             */
+/***********************************************************************************************/
 int ReadIniFileToMemmory(CSettings *appSettings)
 {
 	CString pathToExeFileFolder = GetPathToExeFileFolder();
@@ -166,7 +197,9 @@ int ReadIniFileToMemmory(CSettings *appSettings)
 	return 1;
 }
 
-
+/***********************************************************************************************/
+/*	Utility function to check if the directory is exists                                       */
+/***********************************************************************************************/
 bool dirExists(const std::string& dirName_in)
 {
 	DWORD ftyp = GetFileAttributesA(dirName_in.c_str());
@@ -183,6 +216,9 @@ bool dirExists(const std::string& dirName_in)
 }
 
 
+/***********************************************************************************************/
+/*	Show to the user existing start path from settings and ask new files extensions to search  */
+/***********************************************************************************************/
 void promtForStartPath(CSettings *appSettings)
 {
 	string startPath;
@@ -229,6 +265,9 @@ void promtForStartPath(CSettings *appSettings)
 }
 
 
+/*******************************************************************************************************/
+/*	Show to the user existing list of extensions from settings and ask new files extensions to search  */
+/*******************************************************************************************************/
 void promtForExtensions(CSettings *appSettings)
 {
 	string extensions;
@@ -319,10 +358,178 @@ void promtForExtensions(CSettings *appSettings)
 		}
 	}
 
-	std::vector <CString> localExtensionsArr = appSettings->getExtensionsArray();
+	
 
 	return;
 
 }
 
+
+/************************************************************************************/
+/*	Search Files In Subfolders Recursively                                          */
+/************************************************************************************/
+void RecurseSearch(TCHAR* path, CSettings *appSettings)
+{
+	wprintf(L"call Recurse for %s.\n", path);
+	WIN32_FIND_DATA FileData;
+	HANDLE          hSearch;
+	DWORD           dwAttrs;
+
+	BOOL            fFinished = FALSE;
+
+	// build a string with wildcards
+	TCHAR* extra = L"\\*.*";
+	TCHAR* backslash = L"\\";
+
+	TCHAR result[250];   // array to hold the result.
+	memset(result, 0, sizeof(TCHAR) * 250);
+
+	wcscpy_s(result, path); // copy string one into the result.
+	wcscat_s(result, extra); // append string two to the result.
+
+
+	// Start searching for files in the current directory. 
+
+	hSearch = FindFirstFile(result, &FileData);
+	if (hSearch == INVALID_HANDLE_VALUE)
+	{
+		wprintf(L"No text files found.\n");
+		return;
+	}
+
+	while (!fFinished)
+	{
+		//wprintf(L"File name: %s\n", FileData.cFileName);
+
+		// skip . and .. files; otherwise, we'd
+		// recur infinitely!
+		if (FileData.cFileName[0] == '.')
+		{
+			if (!FindNextFile(hSearch, &FileData))
+			{
+				if (GetLastError() == ERROR_NO_MORE_FILES)
+				{
+					fFinished = TRUE;
+				}
+				else
+				{
+					wprintf(L"Could not find next file.\n");
+					return;
+				}
+			}
+			continue;
+		}
+
+		dwAttrs = FileData.dwFileAttributes;
+
+		if (dwAttrs & FILE_ATTRIBUTE_DIRECTORY)
+		{
+			//wprintf(L"%s is a directory\n", FileData.cFileName);
+			// if it's a directory, recursively search it
+			memset(result, 0, sizeof(TCHAR) * 250);  // reset path
+			wcscpy_s(result, path); // copy string one into the result.
+			wcscat_s(result, backslash);
+			wcscat_s(result, FileData.cFileName); // copy string one into the result.
+												  //wprintf(L"Path: %s\n", result); 
+			RecurseSearch(result, appSettings);
+		}
+		else
+		{
+			wprintf(L"File name: %s\n", FileData.cFileName);
+
+			// check for the extension
+			if (hasExtension(FileData.cFileName, appSettings))
+			{
+				wcout << L"Add file " << FileData.cFileName << " to database " << endl;
+				//	If you find JPG file, add to the database:
+				//	- original file name -> fileName
+				//	- original file path -> filePath
+
+
+				//	- original file modified date 
+				//	- data picture taken
+				//	- file size
+				//	- history of copying/moving
+			}
+
+		}
+
+		if (!FindNextFile(hSearch, &FileData))
+		{
+			if (GetLastError() == ERROR_NO_MORE_FILES)
+			{
+				fFinished = TRUE;
+			}
+			else
+			{
+				printf("Could not find next file.\n");
+				return;
+			}
+		}
+	}
+
+	// Close the search handle. 
+
+	FindClose(hSearch);
+}
+
+
+/*********************************************************************************************/
+/*	 Utility function to check extension of the file                                         */
+/*********************************************************************************************/
+bool hasExtension(const WCHAR* fileName, CSettings *appSettings)
+{
+	const int num = wcslen(fileName);	// legth of the fileName
+
+	bool found = false;
+
+	std::vector <CString> currentExtensionsArr = appSettings->getExtensionsArray();
+	CString currentExtension = L"";
+	for (std::vector<CString>::iterator it = currentExtensionsArr.begin(); it != currentExtensionsArr.end(); ++it)
+	{
+		currentExtension = (CString)*it;
+		currentExtension = currentExtension.MakeLower();	// make it lower case
+
+		const unsigned int NUM_ELEMENTS = wcslen(fileName); // the size of the array which holds path
+		WCHAR tempArray[MAX_PATH];
+		wmemset(tempArray, 0, MAX_PATH);
+		wcsncpy_s(tempArray, fileName, NUM_ELEMENTS);
+
+		const unsigned int NUM_ELEMENTS_TEMP = wcslen(fileName);
+
+		// search "." to separate extension
+
+		CString wholeFileName(fileName);										// casting to CString
+		CT2CA pszConvertedAnsiString(wholeFileName);							// Convert a TCHAR string to a LPCSTR
+		std::string strStdWholeFileName(pszConvertedAnsiString);				// construct a std::string using the LPCSTR input
+
+		unsigned found = strStdWholeFileName.find_last_of("/.");				// getting location of the last "\" in the path
+
+		unsigned extLengtgh = strStdWholeFileName.length() - ( found +  1);		// 1 is for dot
+		
+		CString strPathToFolder = wholeFileName.Right(extLengtgh);				// cut off file name from the path
+
+		strPathToFolder = strPathToFolder.MakeLower();
+
+
+		// get the last 4 symbols of the path
+		int startElement = NUM_ELEMENTS_TEMP - 3;
+
+
+
+
+		WCHAR* extensionFormThefile = &tempArray[startElement];
+		size_t sizeOfString = wcslen(extensionFormThefile);
+		//_wcslwr_s(extensionFormThefile, sizeOfString);  // make it lower case
+		_wcslwr(extensionFormThefile);
+
+		if (wcscmp(strPathToFolder, currentExtension) == 0)			//extensionFormThefile
+		{
+			found = true;
+			return found;
+		}
+	}
+
+	return found;
+}
 
