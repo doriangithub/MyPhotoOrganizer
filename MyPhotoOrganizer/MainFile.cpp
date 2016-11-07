@@ -1,3 +1,12 @@
+///////////////////////////////////////////////////////////////////////////////
+// Main.cpp
+// ==========
+// Main file of My Photo Organizer
+//
+//  AUTHOR: Dorian.Sharevich (dorian.sharevich@gmail.com)
+// CREATED: 2016-11-03
+// UPDATED: 2016-11-06
+///////////////////////////////////////////////////////////////////////////////
 #include <Windows.h>
 #include <iostream>
 #include <fstream>
@@ -8,7 +17,6 @@
 #include "Settings.h"
 
 using namespace std;
-
 
 CString GetPathToExeFileFolder();
 int ReadIniFileToMemmory(CSettings *appSettings);
@@ -31,11 +39,35 @@ int main(int argv, char* args[])
 	if (rezult != 1)
 	{
 		// cannot initialize db
+		// show error and quirt
+		return 1;
 	}
 
 	// if database is opened successfully, read ini file
 	CSettings appSettings = CSettings();
-	ReadIniFileToMemmory(&appSettings);
+	rezult = ReadIniFileToMemmory(&appSettings);
+
+	if (rezult != 1)
+	{
+		// cannot read ini file
+		// show error and quirt
+		return 1;
+	}
+
+	// create table in db
+
+	/* Create SQL statement */
+	char* sql = "CREATE TABLE MEDIAFILES("
+		"ID INT PRIMARY			KEY      NOT NULL,"
+		"FILE_NAME				TEXT     NOT NULL,"		//	- original file name -> fileName
+		"FILE_PATH				TEXT     NOT NULL,"		//	- original file path -> filePath
+		"FILE_MODIFIED_DATE		TEXT     NOT NULL,"		//	- original file modified date 
+		"PICTURE_TAKEN_DATE		TEXT     NOT NULL,"		//	- data picture taken
+		"FILE_SIZE				INT     NOT NULL);";	//	- file size
+														//	- history of copying/moving
+
+	rezult = photosDB.createTable(sql);
+
 
 	//==============================================================================
 	// we prompt for start folder, from where we start search files
@@ -166,12 +198,6 @@ int ReadIniFileToMemmory(CSettings *appSettings)
 						}
 
 					}
-					//if (csLine.Compare(L"") != 0)
-					//{
-					//	appSettings->addExtension(csLine);
-					//}
-
-
 				}
 			}
 
@@ -350,7 +376,6 @@ void promtForExtensions(CSettings *appSettings)
 				csLine = L"";
 				found = csLine.Find(L";");
 			}
-
 		}
 		if (csLine.Compare(L"") != 0)
 		{
@@ -511,19 +536,7 @@ bool hasExtension(const WCHAR* fileName, CSettings *appSettings)
 
 		strPathToFolder = strPathToFolder.MakeLower();
 
-
-		// get the last 4 symbols of the path
-		int startElement = NUM_ELEMENTS_TEMP - 3;
-
-
-
-
-		WCHAR* extensionFormThefile = &tempArray[startElement];
-		size_t sizeOfString = wcslen(extensionFormThefile);
-		//_wcslwr_s(extensionFormThefile, sizeOfString);  // make it lower case
-		_wcslwr(extensionFormThefile);
-
-		if (wcscmp(strPathToFolder, currentExtension) == 0)			//extensionFormThefile
+		if (wcscmp(strPathToFolder, currentExtension) == 0)						//extensionFormThefile
 		{
 			found = true;
 			return found;
