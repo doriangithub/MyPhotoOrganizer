@@ -17,9 +17,10 @@ public:
 	CFilesDB();
 	~CFilesDB();
 
-	bool dbFileExists();
 	int initializeDB();
 	int createTable(const char* sqlStr);
+	int insertData(const char* sqlStr);
+	int printData(const char* sqlStr);
 
 };
 

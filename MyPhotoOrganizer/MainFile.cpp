@@ -13,19 +13,26 @@
 #include <string>
 #include <tchar.h>
 #include <atlstr.h>
+#include <Strsafe.h>
+#include <gdiplus.h>
+#include <comdef.h>  // you will need this
 #include "FilesDB.h"
 #include "Settings.h"
 
 using namespace std;
+using namespace Gdiplus;
 
 CString GetPathToExeFileFolder();
 int ReadIniFileToMemmory(CSettings *appSettings);
 bool dirExists(const std::string& dirName_in);
 void promtForStartPath(CSettings *appSettings);
 void promtForExtensions(CSettings *appSettings);
-void RecurseSearch(TCHAR* path, CSettings *appSettings);
+void RecurseSearch(TCHAR* path, CSettings *appSettings, CFilesDB *photosDB);
 bool hasExtension(const WCHAR* fileName, CSettings *appSettings);
+HRESULT PropertyTypeFromWORD(WORD index, WCHAR* string, UINT maxChars);
+char* metadataDateTaken(TCHAR* fullPathToFile);
 
+static int numberOfMediaFiles = 0;
 
 /***********************************************************************************************/
 /*	Main function of application My Photo Organizer                                            */
@@ -55,13 +62,11 @@ int main(int argv, char* args[])
 	}
 
 	// create table in db
-
 	/* Create SQL statement */
 	char* sql = "CREATE TABLE MEDIAFILES("
-		"ID INT PRIMARY			KEY      NOT NULL,"
+		"ID		INT 	PRIMARY KEY      NOT NULL,"
 		"FILE_NAME				TEXT     NOT NULL,"		//	- original file name -> fileName
 		"FILE_PATH				TEXT     NOT NULL,"		//	- original file path -> filePath
-		"FILE_MODIFIED_DATE		TEXT     NOT NULL,"		//	- original file modified date 
 		"PICTURE_TAKEN_DATE		TEXT     NOT NULL,"		//	- data picture taken
 		"FILE_SIZE				INT     NOT NULL);";	//	- file size
 														//	- history of copying/moving
@@ -96,10 +101,18 @@ int main(int argv, char* args[])
 
 	TCHAR* currentStartPathTchar = new TCHAR[currentStartPath.GetLength() + 1];
 	lstrcpy(currentStartPathTchar, currentStartPath);
-	RecurseSearch(currentStartPathTchar, &appSettings);
+
+	RecurseSearch(currentStartPathTchar, &appSettings, &photosDB);
+	
+	//===============================================================================
+	// print out content of database
+
+	/* Create SQL statement */
+	sql = "SELECT * from MEDIAFILES";
+
+	photosDB.printData(sql);
+
 	delete[]currentStartPathTchar;
-
-
 	system("pause");
 	return 1;
 }
@@ -393,7 +406,7 @@ void promtForExtensions(CSettings *appSettings)
 /************************************************************************************/
 /*	Search Files In Subfolders Recursively                                          */
 /************************************************************************************/
-void RecurseSearch(TCHAR* path, CSettings *appSettings)
+void RecurseSearch(TCHAR* path, CSettings *appSettings, CFilesDB *photosDB)
 {
 	wprintf(L"call Recurse for %s.\n", path);
 	WIN32_FIND_DATA FileData;
@@ -418,7 +431,7 @@ void RecurseSearch(TCHAR* path, CSettings *appSettings)
 	hSearch = FindFirstFile(result, &FileData);
 	if (hSearch == INVALID_HANDLE_VALUE)
 	{
-		wprintf(L"No text files found.\n");
+		wprintf(L"No files found.\n");
 		return;
 	}
 
@@ -456,7 +469,7 @@ void RecurseSearch(TCHAR* path, CSettings *appSettings)
 			wcscat_s(result, backslash);
 			wcscat_s(result, FileData.cFileName); // copy string one into the result.
 												  //wprintf(L"Path: %s\n", result); 
-			RecurseSearch(result, appSettings);
+			RecurseSearch(result, appSettings, photosDB);
 		}
 		else
 		{
@@ -465,6 +478,8 @@ void RecurseSearch(TCHAR* path, CSettings *appSettings)
 			// check for the extension
 			if (hasExtension(FileData.cFileName, appSettings))
 			{
+				numberOfMediaFiles++;
+
 				wcout << L"Add file " << FileData.cFileName << " to database " << endl;
 				//	If you find JPG file, add to the database:
 				//	- original file name -> fileName
@@ -475,6 +490,75 @@ void RecurseSearch(TCHAR* path, CSettings *appSettings)
 				//	- data picture taken
 				//	- file size
 				//	- history of copying/moving
+
+				
+				WCHAR* fileName = FileData.cFileName;
+				int fileSizeLow = FileData.nFileSizeLow;	// The low-order DWORD value of the file size, in bytes.
+				int fileSizeHigh = FileData.nFileSizeHigh;	// The high-order DWORD value of the file size, in bytes.
+															// This value is zero unless the file size is greater than MAXDWORD.
+															// The size of the file is equal to(nFileSizeHigh * (MAXDWORD + 1)) + nFileSizeLow.
+
+				TCHAR* filePath = path;
+
+				TCHAR fullPathToFile[256];
+				_stprintf(fullPathToFile, _T("%s%s%s"), filePath, _T("\\"), fileName);
+
+				
+
+				
+
+
+
+				char sqlStatement[800];
+	
+				
+
+				// ID
+				int id = numberOfMediaFiles;
+				
+				// FILE_NAME
+				_bstr_t fileNameWchar(fileName);
+				char* fileNameChar = fileNameWchar;
+
+				// FILE_PATH
+				char filePathChar[256];
+				wcstombs(filePathChar, filePath, wcslen(filePath) + 1);
+
+				// PICTURE_TAKEN_DATE
+				char* datePtotoTaken = metadataDateTaken(fullPathToFile);		//  YYYY:MM:DD HH:MM:SS
+
+				// FILE_SIZE
+				int fileSize = (fileSizeHigh * (MAXDWORD + 1)) + fileSizeLow;
+
+				if (strcmp(datePtotoTaken, "") != 0)
+				{
+
+					sprintf(sqlStatement, "%s%d,'%s','%s','%s',%d);",
+						"INSERT INTO MEDIAFILES(ID, FILE_NAME, FILE_PATH, PICTURE_TAKEN_DATE, FILE_SIZE ) VALUES (",
+						id,
+						fileNameChar,
+						filePathChar,
+						datePtotoTaken,
+						fileSize
+					);
+
+					photosDB->insertData(sqlStatement);
+					//"ID						INT		PRIMARY	KEY      NOT NULL,"									10
+					//"FILE_NAME				TEXT     NOT NULL,"		//	- original file name -> fileName		128
+					//"FILE_PATH				TEXT     NOT NULL,"		//	- original file path -> filePath		256
+					//"FILE_MODIFIED_DATE		TEXT     NOT NULL,"		//	- original file modified date           20
+					//"PICTURE_TAKEN_DATE		TEXT     NOT NULL,"		//	- data picture taken                    20
+					//"FILE_SIZE				INT     NOT NULL);";	//	- file size                             10
+
+					//char *sql = "INSERT INTO MEDIAFILES (ID,FILE_NAME,FILE_PATH,FILE_MODIFIED_DATE,PICTURE_TAKEN_DATE, FILE_SIZE) "  \
+					//	"VALUES (1, 'Paul', 32, 'California', 20000.00 ); " \
+					//	"INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
+					//	"VALUES (2, 'Allen', 25, 'Texas', 15000.00 ); "     \
+					//	"INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
+					//	"VALUES (3, 'Teddy', 23, 'Norway', 20000.00 );" \
+					//	"INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
+					//	"VALUES (4, 'Mark', 25, 'Rich-Mond ', 65000.00 );";
+				}
 			}
 
 		}
@@ -546,3 +630,90 @@ bool hasExtension(const WCHAR* fileName, CSettings *appSettings)
 	return found;
 }
 
+
+/*********************************************************************************************/
+/*	 Helper function                                         */
+/*********************************************************************************************/
+HRESULT PropertyTypeFromWORD(WORD index, WCHAR* string, UINT maxChars)
+{
+	HRESULT hr = E_FAIL;
+
+	WCHAR* propertyTypes[] = {
+		L"Nothing",                   // 0
+		L"PropertyTagTypeByte",       // 1
+		L"PropertyTagTypeASCII",      // 2
+		L"PropertyTagTypeShort",      // 3
+		L"PropertyTagTypeLong",       // 4
+		L"PropertyTagTypeRational",   // 5
+		L"Nothing",                   // 6
+		L"PropertyTagTypeUndefined",  // 7
+		L"Nothing",                   // 8
+		L"PropertyTagTypeSLONG",      // 9
+		L"PropertyTagTypeSRational" }; // 10
+
+	hr = StringCchCopyW(string, maxChars, propertyTypes[index]);
+	return hr;
+}
+
+
+char* metadataDateTaken(TCHAR* fullPathToFile)
+{
+	char* dateTaken = "";
+
+	// Initialize <tla rid="tla_gdiplus"/>.
+	GdiplusStartupInput gdiplusStartupInput;
+	ULONG_PTR gdiplusToken;
+	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+
+	UINT    size = 0;
+	UINT    count = 0;
+
+#define MAX_PROPTYPE_SIZE 30
+	WCHAR strPropertyType[MAX_PROPTYPE_SIZE] = L"";
+
+	Bitmap* bitmap = new Bitmap(fullPathToFile);
+	bitmap->GetPropertySize(&size, &count);
+
+	printf("There are %d pieces of metadata in the file.\n", count);
+	printf("The total size of the metadata is %d bytes.\n", size);
+
+	// GetAllPropertyItems returns an array of PropertyItem objects.
+	// Allocate a buffer large enough to receive that array.
+	PropertyItem* pPropBuffer = (PropertyItem*)malloc(size);
+
+	// Get the array of PropertyItem objects.
+	bitmap->GetAllPropertyItems(size, count, pPropBuffer);
+
+	// For each PropertyItem in the array, display the id, type, and length.
+	for (UINT j = 0; j < count; ++j)
+	{
+		// Convert the property type from a WORD to a string.
+		PropertyTypeFromWORD(pPropBuffer[j].type, strPropertyType, MAX_PROPTYPE_SIZE);
+
+		printf("Property Item %d\n", j);
+		printf("  id: 0x%x\n", pPropBuffer[j].id);
+		wprintf(L"  type: %s\n", strPropertyType);
+		printf("  length: %d bytes\n\n", pPropBuffer[j].length);
+		
+		unsigned long int tagValue = pPropBuffer[j].id;
+
+		switch (tagValue)
+		{
+		case 0x9003:
+			printf("****Date and time when the original image data was generated(YYYY:MM:DD HH:MM:SS): %s.\n", pPropBuffer[j].value);
+			dateTaken = (char*)pPropBuffer[j].value;
+			break;
+		case 0x013B:
+			printf("***######***Who created the image: %s.\n", pPropBuffer[j].value);
+			break;
+		default:
+			break;
+		}
+	}
+
+	//free(pPropBuffer);
+	delete bitmap;
+	GdiplusShutdown(gdiplusToken);
+
+	return dateTaken;
+}
