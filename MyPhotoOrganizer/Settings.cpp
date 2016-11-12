@@ -37,6 +37,18 @@ CString CSettings::getStartPath()
 }
 
 
+void CSettings::setLibRootPath(CString libRootpathStr)
+{
+	this->libRootpathStr = libRootpathStr;
+}
+
+
+CString CSettings::getLibRootPath()
+{
+	return this->libRootpathStr;
+}
+
+
 std::vector <CString> CSettings::getExtensionsArray()
 {
 	return this->extensionsArray;

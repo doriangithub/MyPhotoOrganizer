@@ -20,10 +20,12 @@ public:
 	void deleteExtensionsList();
 	void setStartPath(CString startpathStr);
 	CString getStartPath();
+	void setLibRootPath(CString libRootPathStr);
+	CString getLibRootPath();
 	std::vector <CString> getExtensionsArray();
 private:
 	std::vector <CString> extensionsArray;
 	CString startPath;
-
+	CString libRootpathStr;
 };
 

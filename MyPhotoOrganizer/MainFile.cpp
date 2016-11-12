@@ -24,7 +24,7 @@ using namespace Gdiplus;
 
 CString GetPathToExeFileFolder();
 int ReadIniFileToMemmory(CSettings *appSettings);
-bool dirExists(const std::string& dirName_in);
+bool dirExists(LPCSTR dirName_in);
 void promtForStartPath(CSettings *appSettings);
 void promtForExtensions(CSettings *appSettings);
 void RecurseSearch(TCHAR* path, CSettings *appSettings, CFilesDB *photosDB);
@@ -110,7 +110,38 @@ int main(int argv, char* args[])
 	/* Create SQL statement */
 	sql = "SELECT * from MEDIAFILES";
 
-	photosDB.printData(sql);
+	photosDB.retriveDataFormDataBase(sql);
+
+	//===============================================================================
+	// make new folders structure
+
+	// check existance of root folder
+	CString rootPath = appSettings.getLibRootPath();
+
+	bool rezultBool;
+
+	// Convert a TCHAR string to a LPCSTR
+	//CT2CA pszConvertedAnsiString(rootPath);
+	// construct a std::string using the LPCSTR input
+	//std::string strStd(pszConvertedAnsiString);
+
+	CStringA strARootPath(rootPath); // a helper string
+	LPCSTR ptrRootPath = strARootPath;
+
+	rezultBool = dirExists(ptrRootPath);	//bool dirExists(const std::string& dirName_in)
+
+	if (!rezult)
+	{
+		// make the root folder
+	}
+
+
+	std::vector<FileMetadata> filesMetaDataFromDB = photosDB.getFileMetadata();
+
+	for (std::vector<FileMetadata>::iterator itVec3d = filesMetaDataFromDB.begin(); itVec3d != filesMetaDataFromDB.end(); itVec3d++)
+	{
+		FileMetadata nextFileMetadata = (FileMetadata)(*itVec3d);
+	}
 
 	photosDB.printFileMetadata();
 
@@ -167,7 +198,8 @@ int ReadIniFileToMemmory(CSettings *appSettings)
 
 	string partOfLine;
 	CString strExtensions = _T("[EXTENSIONS]");
-	CString strStartPath = _T("[STARTPATH]");
+	CString strStartPath = _T("[STARTPATH]");	
+	CString strLibRootPath = _T("[LIBRARYROOT]");	
 	CString value;
 	CString srtRighttPartOfLine;
 	bool bKeysFolder = false;
@@ -227,6 +259,18 @@ int ReadIniFileToMemmory(CSettings *appSettings)
 					appSettings->setStartPath(csLine);
 				}
 			}
+
+			// check if it [LIBRARYROOT] section
+			if (strLibRootPath.Compare(csLine) == 0)
+			{
+				// read next line with values
+				getline(standardFileRead, line);
+				if (line.length() != 0)
+				{
+					CString csLine(line.c_str());
+					appSettings->setLibRootPath(csLine);
+				}
+			}
 		}
 		else
 		{
@@ -238,12 +282,13 @@ int ReadIniFileToMemmory(CSettings *appSettings)
 	return 1;
 }
 
+
 /***********************************************************************************************/
 /*	Utility function to check if the directory is exists                                       */
 /***********************************************************************************************/
-bool dirExists(const std::string& dirName_in)
+bool dirExists(LPCSTR dirName_in)
 {
-	DWORD ftyp = GetFileAttributesA(dirName_in.c_str());
+	DWORD ftyp = GetFileAttributesA(dirName_in);
 	if (ftyp == INVALID_FILE_ATTRIBUTES)
 	{
 		cout << "Error: NO SUCH FOLDER!!!" << endl;
@@ -279,7 +324,7 @@ void promtForStartPath(CSettings *appSettings)
 		{
 			cout << "You have entered this path:" << endl;
 			cout << startPath << endl;
-			wcout << "Is it correct (Y/N)?";
+			cout << "Is it correct (Y/N)?";
 			getline(cin, answer);
 		}
 		else
@@ -297,7 +342,7 @@ void promtForStartPath(CSettings *appSettings)
 			answerRezult = true;
 		}
 
-		answerRezult = dirExists(startPath);
+		answerRezult = dirExists(startPath.c_str());
 
 	} while (!answerRezult);
 

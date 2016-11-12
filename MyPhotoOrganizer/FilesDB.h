@@ -24,9 +24,9 @@ public:
 	int initializeDB();
 	int createTable(const char* sqlStr);
 	int insertData(const char* sqlStr);
-	int printData(const char* sqlStr);
-	//std::vector<FileMetadata> getFileMetadata();
-	//std::vector<FileMetadata> fileMetadata;
+	int retriveDataFormDataBase(const char* sqlStr);
+	std::vector<FileMetadata> getFileMetadata();
+	static std::vector<FileMetadata> fileMetadata;
 	void printFileMetadata();
 };
 

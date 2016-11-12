@@ -16,8 +16,8 @@
 
 static const char DBFILENAME[] = "Files.db";
 
-//std::vector<FileMetadata> CFilesDB::fileMetadata;
-std::vector<FileMetadata> fileMetadata;
+std::vector<FileMetadata> CFilesDB::fileMetadata;
+//std::vector<FileMetadata> fileMetadata;
 
 static int callback(void *NotUsed, int argc, char **argv, char **azColName) {
 	int i;
@@ -61,7 +61,7 @@ static int callbackSelect(void *data, int argc, char **argv, char **azColName) {
 	}
 
 	//CFilesDB::fileMetadata.push_back(*newMetadata);
-	fileMetadata.push_back(*newMetadata);
+	CFilesDB::fileMetadata.push_back(*newMetadata);
 
 	printf("\n");
 	return 0;
@@ -179,7 +179,7 @@ int CFilesDB::insertData(const char* sqlStr)
 }
 
 
-int CFilesDB::printData(const char* sqlStr)  //callbackSelect
+int CFilesDB::retriveDataFormDataBase(const char* sqlStr)  //callbackSelect
 {
 	sqlite3 *db;
 	char *zErrMsg = 0;
@@ -226,3 +226,8 @@ void CFilesDB::printFileMetadata()
 	//}
 }
 
+
+std::vector<FileMetadata> CFilesDB::getFileMetadata()
+{
+	return fileMetadata;
+}
