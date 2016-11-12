@@ -12,12 +12,12 @@
 #include <sqlite3.h> 
 #include <iostream>
 #include <stdlib.h>
-
-
-
 #include "FilesDB.h"
 
 static const char DBFILENAME[] = "Files.db";
+
+//std::vector<FileMetadata> CFilesDB::fileMetadata;
+std::vector<FileMetadata> fileMetadata;
 
 static int callback(void *NotUsed, int argc, char **argv, char **azColName) {
 	int i;
@@ -30,10 +30,39 @@ static int callback(void *NotUsed, int argc, char **argv, char **azColName) {
 
 static int callbackSelect(void *data, int argc, char **argv, char **azColName) {
 	int i;
-	fprintf(stderr, "%s: ", (const char*)data);
+	char* tempRezult;
+	FileMetadata *newMetadata = new FileMetadata();
+	//newMetadata->setId(atoi("123"));
+	//newMetadata->setFileName("myFileName");
+	//newMetadata->setFilePath("C:\\Users\\Test");
+	//newMetadata->setPictureTakenDate("333333");
+	//newMetadata->setFileSize(atoi("1234567"));
+	//fileMetadata.push_back(*newMetadata);
+
+	//newMetadata = new FileMetadata();
+	fprintf(stderr, "%s:: ", (const char*)data);
 	for (i = 0; i<argc; i++) {
-		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+		//printf("%s == %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+		tempRezult = argv[i] ? argv[i] : "NULL";
+		printf("%s == %s\n", azColName[i], tempRezult);
+		if (strcmp(tempRezult, "NULL") != 0)
+		{
+			if (strcmp(azColName[i], "ID") == 0)
+				newMetadata->setId(atoi(tempRezult));
+			if (strcmp(azColName[i], "FILE_NAME") == 0)
+				newMetadata->setFileName(tempRezult);
+			if (strcmp(azColName[i], "FILE_PATH") == 0)
+				newMetadata->setFilePath(tempRezult);
+			if (strcmp(azColName[i], "PICTURE_TAKEN_DATE") == 0)
+				newMetadata->setPictureTakenDate(tempRezult);
+			if (strcmp(azColName[i], "FILE_SIZE") == 0)
+				newMetadata->setFileSize(atoi(tempRezult));
+		}
 	}
+
+	//CFilesDB::fileMetadata.push_back(*newMetadata);
+	fileMetadata.push_back(*newMetadata);
+
 	printf("\n");
 	return 0;
 }
@@ -48,6 +77,7 @@ typedef int(*sqlite3_callback)(
 
 CFilesDB::CFilesDB()
 {
+	
 }
 
 
@@ -167,10 +197,10 @@ int CFilesDB::printData(const char* sqlStr)  //callbackSelect
 		fprintf(stderr, "Opened database successfully\n");
 	}
 
-
-
 	/* Execute SQL statement */
-	rc = sqlite3_exec(db, sqlStr, callbackSelect, (void*)data, &zErrMsg);
+
+	rc = sqlite3_exec(db, sqlStr, callbackSelect, (void*)data, &zErrMsg );
+
 	if (rc != SQLITE_OK) {
 		fprintf(stderr, "SQL error: %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
@@ -181,3 +211,18 @@ int CFilesDB::printData(const char* sqlStr)  //callbackSelect
 	sqlite3_close(db);
 	return 0;
 }
+
+
+void CFilesDB::printFileMetadata()
+{
+	std::cout << "myvector contains:";
+	for (unsigned i = 0; i<fileMetadata.size(); i++)
+		std::cout << ' ' << ((FileMetadata)fileMetadata.at(i)).getFilePath() << std::endl;
+	std::cout << '\n';
+
+	//for (std::vector<FileMetadata>::iterator itVec3d = fileMetadata.begin(); itVec3d != fileMetadata.end(); itVec3d++)
+	//{
+	//	FileMetadata nextFileMetadata = (FileMetadata)(*itVec3d);
+	//}
+}
+

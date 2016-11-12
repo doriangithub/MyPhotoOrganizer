@@ -149,12 +149,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="FileMetadata.cpp" />
     <ClCompile Include="FilesDB.cpp" />
     <ClCompile Include="MainFile.cpp" />
     <ClCompile Include="Settings.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FileMetadata.h" />
     <ClInclude Include="FilesDB.h" />
+    <ClInclude Include="MetadataStruct.h" />
     <ClInclude Include="Settings.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

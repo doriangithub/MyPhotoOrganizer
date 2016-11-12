@@ -10,9 +10,12 @@
     <ClCompile Include="MainFile.cpp" />
     <ClCompile Include="FilesDB.cpp" />
     <ClCompile Include="Settings.cpp" />
+    <ClCompile Include="FileMetadata.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FilesDB.h" />
     <ClInclude Include="Settings.h" />
+    <ClInclude Include="FileMetadata.h" />
+    <ClInclude Include="MetadataStruct.h" />
   </ItemGroup>
 </Project>

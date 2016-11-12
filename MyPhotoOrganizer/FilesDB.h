@@ -8,10 +8,14 @@
 // UPDATED: 2016-11-06
 ///////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include <vector>
+#include "FileMetadata.h"
+
 class CFilesDB
 {
 private:
 	int i;
+	
 	
 public:
 	CFilesDB();
@@ -21,6 +25,8 @@ public:
 	int createTable(const char* sqlStr);
 	int insertData(const char* sqlStr);
 	int printData(const char* sqlStr);
-
+	//std::vector<FileMetadata> getFileMetadata();
+	//std::vector<FileMetadata> fileMetadata;
+	void printFileMetadata();
 };
 

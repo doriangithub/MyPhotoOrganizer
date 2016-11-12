@@ -112,6 +112,8 @@ int main(int argv, char* args[])
 
 	photosDB.printData(sql);
 
+	photosDB.printFileMetadata();
+
 	delete[]currentStartPathTchar;
 	system("pause");
 	return 1;
@@ -543,21 +545,6 @@ void RecurseSearch(TCHAR* path, CSettings *appSettings, CFilesDB *photosDB)
 					);
 
 					photosDB->insertData(sqlStatement);
-					//"ID						INT		PRIMARY	KEY      NOT NULL,"									10
-					//"FILE_NAME				TEXT     NOT NULL,"		//	- original file name -> fileName		128
-					//"FILE_PATH				TEXT     NOT NULL,"		//	- original file path -> filePath		256
-					//"FILE_MODIFIED_DATE		TEXT     NOT NULL,"		//	- original file modified date           20
-					//"PICTURE_TAKEN_DATE		TEXT     NOT NULL,"		//	- data picture taken                    20
-					//"FILE_SIZE				INT     NOT NULL);";	//	- file size                             10
-
-					//char *sql = "INSERT INTO MEDIAFILES (ID,FILE_NAME,FILE_PATH,FILE_MODIFIED_DATE,PICTURE_TAKEN_DATE, FILE_SIZE) "  \
-					//	"VALUES (1, 'Paul', 32, 'California', 20000.00 ); " \
-					//	"INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
-					//	"VALUES (2, 'Allen', 25, 'Texas', 15000.00 ); "     \
-					//	"INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
-					//	"VALUES (3, 'Teddy', 23, 'Norway', 20000.00 );" \
-					//	"INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
-					//	"VALUES (4, 'Mark', 25, 'Rich-Mond ', 65000.00 );";
 				}
 			}
 
