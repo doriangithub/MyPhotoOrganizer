@@ -130,9 +130,17 @@ int main(int argv, char* args[])
 
 	rezultBool = dirExists(ptrRootPath);	//bool dirExists(const std::string& dirName_in)
 
-	if (!rezult)
+	CA2CT prtWcharRootPath(ptrRootPath);
+
+	if (!rezultBool)
 	{
 		// make the root folder
+		rezultBool = CreateDirectory(prtWcharRootPath, NULL);
+		if (!rezultBool)
+		{
+			printf("CreateDirectory failed (%d)\n", GetLastError());
+			return -1;
+		}
 	}
 
 
