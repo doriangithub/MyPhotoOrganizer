@@ -34,6 +34,9 @@ char* metadataDateTaken(TCHAR* fullPathToFile);
 
 static int numberOfMediaFiles = 0;
 
+//CString months[] = {	"January", "February" , "March", "April", "May", "June",
+//				"July", "August", "September", "October", "November", "December" };
+
 /***********************************************************************************************/
 /*	Main function of application My Photo Organizer                                            */
 /***********************************************************************************************/
@@ -121,9 +124,9 @@ int main(int argv, char* args[])
 	bool rezultBool;
 
 	// Convert a TCHAR string to a LPCSTR
-	//CT2CA pszConvertedAnsiString(rootPath);
+	// CT2CA pszConvertedAnsiString(rootPath);
 	// construct a std::string using the LPCSTR input
-	//std::string strStd(pszConvertedAnsiString);
+	// std::string strStd(pszConvertedAnsiString);
 
 	CStringA strARootPath(rootPath); // a helper string
 	LPCSTR ptrRootPath = strARootPath;
@@ -145,10 +148,56 @@ int main(int argv, char* args[])
 
 
 	std::vector<FileMetadata> filesMetaDataFromDB = photosDB.getFileMetadata();
+	CString tempCString;
+	CString tempCStringRight;
 
 	for (std::vector<FileMetadata>::iterator itVec3d = filesMetaDataFromDB.begin(); itVec3d != filesMetaDataFromDB.end(); itVec3d++)
 	{
 		FileMetadata nextFileMetadata = (FileMetadata)(*itVec3d);
+
+		char *nextFilePicTakenDate = nextFileMetadata.getPictureTakenDate();
+
+		// make path from date
+		CString csNextFilePicTakenDate(nextFilePicTakenDate);
+		int stringLength = csNextFilePicTakenDate.GetLength();
+		int found = csNextFilePicTakenDate.Find(L":");
+		
+		int year = 0;
+		int month = 0;
+		int day = 0;
+		LPCSTR yearStr;
+		LPCSTR monthStr;
+		LPCSTR dayStr;
+
+		tempCString = csNextFilePicTakenDate.Left(found);
+		year = _wtoi(tempCString);
+		if ( year > 1980 && year < 3000)
+		{
+			CStringA strA(tempCString); // a helper string CString to LPCSTR
+			yearStr = strA;
+		}
+		tempCStringRight = csNextFilePicTakenDate.Right(stringLength - found - 1);
+		found = tempCStringRight.Find(L":");
+		tempCString = tempCStringRight.Left(found);
+		stringLength = tempCStringRight.GetLength();
+		month = _wtoi(tempCString);
+		if (month > 0 && month <= 12)
+		{
+			CStringA strA(tempCString); // a helper string CString to LPCSTR
+			monthStr = strA;
+		}
+		tempCStringRight = csNextFilePicTakenDate.Right(stringLength - found - 1);
+		found = tempCStringRight.Find(L" ");
+		tempCString = tempCStringRight.Left(found);
+		day = _wtoi(tempCString);
+		if (day > 0 && day <= 31)
+		{
+			CStringA strA(tempCString); // a helper string CString to LPCSTR
+			dayStr = strA;
+		}
+
+
+
 	}
 
 	photosDB.printFileMetadata();
@@ -597,7 +646,21 @@ void RecurseSearch(TCHAR* path, CSettings *appSettings, CFilesDB *photosDB)
 						fileSize
 					);
 
-					photosDB->insertData(sqlStatement);
+					//
+					// if the path is not in library root
+					//
+					CString rootPath = appSettings->getLibRootPath();
+					int rootPathLength = rootPath.GetLength();
+					
+					CString filePathCString(filePath);
+					int filePathLength = filePathCString.GetLength();
+
+					if (filePathLength >= rootPathLength)
+					{
+						CString leftOfFilePath = filePathCString.Left(rootPathLength);
+						if (rootPath != leftOfFilePath)
+							photosDB->insertData(sqlStatement);
+					}
 				}
 			}
 
