@@ -31,11 +31,12 @@ void RecurseSearch(TCHAR* path, CSettings *appSettings, CFilesDB *photosDB);
 bool hasExtension(const WCHAR* fileName, CSettings *appSettings);
 HRESULT PropertyTypeFromWORD(WORD index, WCHAR* string, UINT maxChars);
 char* metadataDateTaken(TCHAR* fullPathToFile);
+LPCSTR makeLPCSTR(CString str);
 
 static int numberOfMediaFiles = 0;
 
-//CString months[] = {	"January", "February" , "March", "April", "May", "June",
-//				"July", "August", "September", "October", "November", "December" };
+CString months[] = { "Dummy", "January", "February" , "March", "April", "May", "June",
+				"July", "August", "September", "October", "November", "December" };
 
 /***********************************************************************************************/
 /*	Main function of application My Photo Organizer                                            */
@@ -154,7 +155,7 @@ int main(int argv, char* args[])
 	for (std::vector<FileMetadata>::iterator itVec3d = filesMetaDataFromDB.begin(); itVec3d != filesMetaDataFromDB.end(); itVec3d++)
 	{
 		FileMetadata nextFileMetadata = (FileMetadata)(*itVec3d);
-
+		
 		char *nextFilePicTakenDate = nextFileMetadata.getPictureTakenDate();
 
 		// make path from date
@@ -168,11 +169,15 @@ int main(int argv, char* args[])
 		LPCSTR yearStr;
 		LPCSTR monthStr;
 		LPCSTR dayStr;
+		CString yearCStr;
+		CString monthCStr;
+		CString dayCStr;
 
 		tempCString = csNextFilePicTakenDate.Left(found);
 		year = _wtoi(tempCString);
 		if ( year > 1980 && year < 3000)
 		{
+			yearCStr = tempCString;
 			CStringA strA(tempCString); // a helper string CString to LPCSTR
 			yearStr = strA;
 		}
@@ -192,11 +197,47 @@ int main(int argv, char* args[])
 		day = _wtoi(tempCString);
 		if (day > 0 && day <= 31)
 		{
+			dayCStr = tempCString;
 			CStringA strA(tempCString); // a helper string CString to LPCSTR
 			dayStr = strA;
 		}
 
+		// make new path 
+		CString newPath = rootPath + "\\" + yearCStr + "\\" + months[month] + "\\" + dayCStr;
 
+		// if folder is not exists, make it
+		bool answerRezult = false;
+		LPCSTR newPathPtr = makeLPCSTR(newPath);
+		answerRezult = dirExists(newPathPtr);
+		if (!answerRezult)
+		{
+			answerRezult = dirExists(makeLPCSTR(rootPath + "\\" + yearCStr));
+			if (!answerRezult)
+			{
+				rezultBool = CreateDirectory(rootPath + "\\" + yearCStr, NULL);
+				if (!rezultBool)
+				{
+					printf("CreateDirectory failed (%d)\n", GetLastError());
+					return -1;
+				}
+			}
+			answerRezult = dirExists(makeLPCSTR(rootPath + "\\" + yearCStr + "\\" + months[month]));
+			if (!answerRezult)
+			{
+				rezultBool = CreateDirectory(rootPath + "\\" + yearCStr + "\\" + months[month], NULL);
+				if (!rezultBool)
+				{
+					printf("CreateDirectory failed (%d)\n", GetLastError());
+					return -1;
+				}
+			}
+			rezultBool = CreateDirectory(newPath, NULL);
+			if (!rezultBool)
+			{
+				printf("CreateDirectory failed (%d)\n", GetLastError());
+				return -1;
+			}
+		}
 
 	}
 
@@ -819,4 +860,12 @@ char* metadataDateTaken(TCHAR* fullPathToFile)
 	GdiplusShutdown(gdiplusToken);
 
 	return dateTaken;
+}
+
+
+LPCSTR makeLPCSTR(CString str)
+{
+	CStringA strA(str); // a helper string
+	LPCSTR newString = strA;
+	return newString;
 }
