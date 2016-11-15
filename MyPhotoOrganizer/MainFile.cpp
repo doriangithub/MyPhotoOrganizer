@@ -239,6 +239,29 @@ int main(int argv, char* args[])
 			}
 		}
 
+		// move or copy file to new location
+
+		char *oldPath = nextFileMetadata.getFilePath();
+		char *oldFileName = nextFileMetadata.getFileName();
+
+		CString csOldPath(oldPath);
+		CString csOldFileName(oldFileName);
+
+		CString csFullOldPath = csOldPath + L"\\" + csOldFileName;
+		CString csFullNewPath = newPath + L"\\" + csOldFileName;
+
+
+		if (CopyFile(csFullOldPath, csFullNewPath, FALSE))  // in LPCWSTR
+		{
+			printf("File copied.\n");
+		}
+		else
+		{
+			printf("Could not copy file.\n");
+		}
+
+
+
 	}
 
 	photosDB.printFileMetadata();
