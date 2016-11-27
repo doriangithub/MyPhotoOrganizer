@@ -17,7 +17,6 @@
 static const char DBFILENAME[] = "Files.db";
 
 std::vector<FileMetadata> CFilesDB::fileMetadata;
-//std::vector<FileMetadata> fileMetadata;
 
 static int callback(void *NotUsed, int argc, char **argv, char **azColName) {
 	int i;
@@ -101,7 +100,7 @@ int CFilesDB::initializeDB()
 		return -1;
 	}
 	else {
-		fprintf(stderr, "Opened database successfully\n");
+		//fprintf(stderr, "Opened database successfully\n");
 	}
 	sqlite3_close(db);
 	return 1;
@@ -121,20 +120,22 @@ int CFilesDB::createTable(const char* sqlStr)
 		return(0);
 	}
 	else {
-		fprintf(stdout, "Opened database successfully\n");
+		//fprintf(stdout, "Opened database successfully\n");
 	}
 
 	/* Execute SQL statement */
 	rc = sqlite3_exec(db, sqlStr, callback, 0, &zErrMsg);
 	if (rc != SQLITE_OK) {
 		fprintf(stderr, "SQL error: %s\n", zErrMsg);
+		system("pause");
 		sqlite3_free(zErrMsg);
+		//return(0);
 	}
 	else {
-		fprintf(stdout, "Table created successfully\n");
+		//fprintf(stdout, "Table created successfully\n");
 	}
 	sqlite3_close(db);
-	return 0;
+	return 1;
 }
 
 
@@ -152,7 +153,7 @@ int CFilesDB::insertData(const char* sqlStr)
 		return(0);
 	}
 	else {
-		fprintf(stderr, "Opened database successfully\n");
+		//fprintf(stderr, "Opened database successfully\n");
 	}
 
 	/* Create SQL statement */
@@ -169,10 +170,11 @@ int CFilesDB::insertData(const char* sqlStr)
 	rc = sqlite3_exec(db, sqlStr, callback, 0, &zErrMsg);
 	if (rc != SQLITE_OK) {
 		fprintf(stderr, "SQL error: %s\n", zErrMsg);
+		system("pause");
 		sqlite3_free(zErrMsg);
 	}
 	else {
-		fprintf(stdout, "Records created successfully\n");
+		//fprintf(stdout, "Records created successfully\n");
 	}
 	sqlite3_close(db);
 	return 0;
@@ -194,7 +196,7 @@ int CFilesDB::retriveDataFormDataBase(const char* sqlStr)  //callbackSelect
 		return(0);
 	}
 	else {
-		fprintf(stderr, "Opened database successfully\n");
+		//fprintf(stderr, "Opened database successfully\n");
 	}
 
 	/* Execute SQL statement */
@@ -203,10 +205,11 @@ int CFilesDB::retriveDataFormDataBase(const char* sqlStr)  //callbackSelect
 
 	if (rc != SQLITE_OK) {
 		fprintf(stderr, "SQL error: %s\n", zErrMsg);
+		system("pause");
 		sqlite3_free(zErrMsg);
 	}
 	else {
-		fprintf(stdout, "Operation done successfully\n");
+		//fprintf(stdout, "Operation done successfully\n");
 	}
 	sqlite3_close(db);
 	return 0;
@@ -219,11 +222,6 @@ void CFilesDB::printFileMetadata()
 	for (unsigned i = 0; i<fileMetadata.size(); i++)
 		std::cout << ' ' << ((FileMetadata)fileMetadata.at(i)).getFilePath() << std::endl;
 	std::cout << '\n';
-
-	//for (std::vector<FileMetadata>::iterator itVec3d = fileMetadata.begin(); itVec3d != fileMetadata.end(); itVec3d++)
-	//{
-	//	FileMetadata nextFileMetadata = (FileMetadata)(*itVec3d);
-	//}
 }
 
 

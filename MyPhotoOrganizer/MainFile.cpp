@@ -32,6 +32,7 @@ bool hasExtension(const WCHAR* fileName, CSettings *appSettings);
 HRESULT PropertyTypeFromWORD(WORD index, WCHAR* string, UINT maxChars);
 char* metadataDateTaken(TCHAR* fullPathToFile);
 LPCSTR makeLPCSTR(CString str);
+void DisplayError(LPTSTR lpszFunction);
 
 static int numberOfMediaFiles = 0;
 
@@ -43,40 +44,38 @@ CString months[] = { "Dummy", "January", "February" , "March", "April", "May", "
 /***********************************************************************************************/
 int main(int argv, char* args[])
 {
+	// make database to store found files
 	CFilesDB photosDB = CFilesDB();
-
 	int rezult = photosDB.initializeDB();
-
 	if (rezult != 1)
 	{
-		// cannot initialize db
-		// show error and quirt
-		return 1;
+		// cannot initialize db show error and quit
+		return -1;
 	}
 
 	// if database is opened successfully, read ini file
 	CSettings appSettings = CSettings();
 	rezult = ReadIniFileToMemmory(&appSettings);
-
 	if (rezult != 1)
 	{
-		// cannot read ini file
-		// show error and quirt
-		return 1;
+		// cannot read ini file show error and quit
+		return -1;
 	}
 
 	// create table in db
-	/* Create SQL statement */
 	char* sql = "CREATE TABLE MEDIAFILES("
-		"ID		INT 	PRIMARY KEY      NOT NULL,"
+		"ID		INT 	PRIMARY KEY      NOT NULL,"		
 		"FILE_NAME				TEXT     NOT NULL,"		//	- original file name -> fileName
 		"FILE_PATH				TEXT     NOT NULL,"		//	- original file path -> filePath
 		"PICTURE_TAKEN_DATE		TEXT     NOT NULL,"		//	- data picture taken
 		"FILE_SIZE				INT     NOT NULL);";	//	- file size
-														//	- history of copying/moving
 
 	rezult = photosDB.createTable(sql);
-
+	if (rezult != 1)
+	{
+		// cannot read ini file show error and quit
+		return -1;
+	}
 
 	//==============================================================================
 	// we prompt for start folder, from where we start search files
@@ -102,38 +101,27 @@ int main(int argv, char* args[])
 	
 	//===============================================================================
 	// Start recursevly search files in all subdirectories
-
 	TCHAR* currentStartPathTchar = new TCHAR[currentStartPath.GetLength() + 1];
 	lstrcpy(currentStartPathTchar, currentStartPath);
-
 	RecurseSearch(currentStartPathTchar, &appSettings, &photosDB);
 	
 	//===============================================================================
 	// print out content of database
-
-	/* Create SQL statement */
 	sql = "SELECT * from MEDIAFILES";
-
 	photosDB.retriveDataFormDataBase(sql);
 
 	//===============================================================================
 	// make new folders structure
-
-	// check existance of root folder
 	CString rootPath = appSettings.getLibRootPath();
-
-	bool rezultBool;
-
-	// Convert a TCHAR string to a LPCSTR
-	// CT2CA pszConvertedAnsiString(rootPath);
-	// construct a std::string using the LPCSTR input
-	// std::string strStd(pszConvertedAnsiString);
-
-	CStringA strARootPath(rootPath); // a helper string
+	// convert path to LPCSTR
+	CStringA strARootPath(rootPath);		// a helper string
 	LPCSTR ptrRootPath = strARootPath;
+	
+	// check existance of root folder
+	bool rezultBool;
+	rezultBool = dirExists(ptrRootPath);	// bool dirExists(const std::string& dirName_in)
 
-	rezultBool = dirExists(ptrRootPath);	//bool dirExists(const std::string& dirName_in)
-
+	// convert to LPCWSTR
 	CA2CT prtWcharRootPath(ptrRootPath);
 
 	if (!rezultBool)
@@ -147,18 +135,17 @@ int main(int argv, char* args[])
 		}
 	}
 
-
+	// retrive callected data about found files
 	std::vector<FileMetadata> filesMetaDataFromDB = photosDB.getFileMetadata();
 	CString tempCString;
 	CString tempCStringRight;
 
 	for (std::vector<FileMetadata>::iterator itVec3d = filesMetaDataFromDB.begin(); itVec3d != filesMetaDataFromDB.end(); itVec3d++)
 	{
+		// make new path from date
 		FileMetadata nextFileMetadata = (FileMetadata)(*itVec3d);
-		
 		char *nextFilePicTakenDate = nextFileMetadata.getPictureTakenDate();
-
-		// make path from date
+		// convert form char* to CString
 		CString csNextFilePicTakenDate(nextFilePicTakenDate);
 		int stringLength = csNextFilePicTakenDate.GetLength();
 		int found = csNextFilePicTakenDate.Find(L":");
@@ -178,7 +165,7 @@ int main(int argv, char* args[])
 		if ( year > 1980 && year < 3000)
 		{
 			yearCStr = tempCString;
-			CStringA strA(tempCString); // a helper string CString to LPCSTR
+			CStringA strA(tempCString);		// convert CString to LPCSTR
 			yearStr = strA;
 		}
 		tempCStringRight = csNextFilePicTakenDate.Right(stringLength - found - 1);
@@ -188,7 +175,7 @@ int main(int argv, char* args[])
 		month = _wtoi(tempCString);
 		if (month > 0 && month <= 12)
 		{
-			CStringA strA(tempCString); // a helper string CString to LPCSTR
+			CStringA strA(tempCString);		// convert string CString to LPCSTR
 			monthStr = strA;
 		}
 		tempCStringRight = csNextFilePicTakenDate.Right(stringLength - found - 1);
@@ -240,7 +227,6 @@ int main(int argv, char* args[])
 		}
 
 		// move or copy file to new location
-
 		char *oldPath = nextFileMetadata.getFilePath();
 		char *oldFileName = nextFileMetadata.getFileName();
 
@@ -250,17 +236,74 @@ int main(int argv, char* args[])
 		CString csFullOldPath = csOldPath + L"\\" + csOldFileName;
 		CString csFullNewPath = newPath + L"\\" + csOldFileName;
 
-
 		if (CopyFile(csFullOldPath, csFullNewPath, FALSE))  // in LPCWSTR
 		{
-			printf("File copied.\n");
+			printf("\nFile copied.\n");
 		}
 		else
 		{
-			printf("Could not copy file.\n");
+			//printf("Could not copy file.\n");
+			printf(".");
 		}
 
+		// make file with notes
 
+		HANDLE hFile;
+		
+		// Convert to UTF8
+		CString note = csOldFileName + L"\t" + csOldPath;
+		CT2A csOldPathAscii(note, CP_UTF8);
+		DWORD dwBytesToWrite = (DWORD)strlen(csOldPathAscii);
+		DWORD dwBytesWritten = 0;
+		BOOL bErrorFlag = FALSE;
+		LPCWSTR lpFileName = L"Notes.txt";
+
+		hFile = CreateFile(newPath + L"\\" + lpFileName,                // name of the write
+			GENERIC_WRITE,          // open for writing
+			0,                      // do not share
+			NULL,                   // default security
+			OPEN_ALWAYS,             // create new file only
+			FILE_ATTRIBUTE_NORMAL,  // normal file
+			NULL);                  // no attr. template
+
+		if (hFile == INVALID_HANDLE_VALUE)
+		{
+			DisplayError(TEXT("CreateFile"));
+			_tprintf(TEXT("Terminal failure: Unable to open file \"%s\" for write.\n"), lpFileName);
+			return -1;
+		}
+
+		//_tprintf(TEXT("Writing %d bytes to %s.\n"), dwBytesToWrite, lpFileName);
+
+		bErrorFlag = WriteFile(
+			hFile,           // open file handle
+			csOldPathAscii,  //DataBuffer,      // start of data to write
+			dwBytesToWrite,  // number of bytes to write
+			&dwBytesWritten, // number of bytes that were written
+			NULL);            // no overlapped structure
+
+		if (FALSE == bErrorFlag)
+		{
+			DisplayError(TEXT("WriteFile"));
+			printf("Terminal failure: Unable to write to file.\n");
+		}
+		else
+		{
+			if (dwBytesWritten != dwBytesToWrite)
+			{
+				// This is an error because a synchronous write that results in
+				// success (WriteFile returns TRUE) should write all data as
+				// requested. This would not necessarily be the case for
+				// asynchronous writes.
+				printf("Error: dwBytesWritten != dwBytesToWrite\n");
+			}
+			else
+			{
+				//_tprintf(TEXT("Wrote %d bytes to %s successfully.\n"), dwBytesWritten, lpFileName);
+			}
+		}
+
+		CloseHandle(hFile);
 
 	}
 
@@ -576,7 +619,7 @@ void promtForExtensions(CSettings *appSettings)
 /************************************************************************************/
 void RecurseSearch(TCHAR* path, CSettings *appSettings, CFilesDB *photosDB)
 {
-	wprintf(L"call Recurse for %s.\n", path);
+	//wprintf(L"call Recurse for %s.\n", path);
 	WIN32_FIND_DATA FileData;
 	HANDLE          hSearch;
 	DWORD           dwAttrs;
@@ -599,7 +642,7 @@ void RecurseSearch(TCHAR* path, CSettings *appSettings, CFilesDB *photosDB)
 	hSearch = FindFirstFile(result, &FileData);
 	if (hSearch == INVALID_HANDLE_VALUE)
 	{
-		wprintf(L"No files found.\n");
+		//wprintf(L"No files found.\n");
 		return;
 	}
 
@@ -641,14 +684,14 @@ void RecurseSearch(TCHAR* path, CSettings *appSettings, CFilesDB *photosDB)
 		}
 		else
 		{
-			wprintf(L"File name: %s\n", FileData.cFileName);
+			//wprintf(L"File name: %s\n", FileData.cFileName);
 
 			// check for the extension
 			if (hasExtension(FileData.cFileName, appSettings))
 			{
 				numberOfMediaFiles++;
 
-				wcout << L"Add file " << FileData.cFileName << " to database " << endl;
+				//wcout << L"Add file " << FileData.cFileName << " to database " << endl;
 				//	If you find JPG file, add to the database:
 				//	- original file name -> fileName
 				//	- original file path -> filePath
@@ -783,11 +826,11 @@ bool hasExtension(const WCHAR* fileName, CSettings *appSettings)
 
 		unsigned extLengtgh = strStdWholeFileName.length() - ( found +  1);		// 1 is for dot
 		
-		CString strPathToFolder = wholeFileName.Right(extLengtgh);				// cut off file name from the path
+		CString strFileExtension = wholeFileName.Right(extLengtgh);				// cut off file name from the path
 
-		strPathToFolder = strPathToFolder.MakeLower();
+		strFileExtension = strFileExtension.MakeLower();
 
-		if (wcscmp(strPathToFolder, currentExtension) == 0)						//extensionFormThefile
+		if (wcscmp(strFileExtension, currentExtension) == 0)						//extensionFormThefile
 		{
 			found = true;
 			return found;
@@ -841,8 +884,8 @@ char* metadataDateTaken(TCHAR* fullPathToFile)
 	Bitmap* bitmap = new Bitmap(fullPathToFile);
 	bitmap->GetPropertySize(&size, &count);
 
-	printf("There are %d pieces of metadata in the file.\n", count);
-	printf("The total size of the metadata is %d bytes.\n", size);
+	//printf("There are %d pieces of metadata in the file.\n", count);
+	//printf("The total size of the metadata is %d bytes.\n", size);
 
 	// GetAllPropertyItems returns an array of PropertyItem objects.
 	// Allocate a buffer large enough to receive that array.
@@ -857,21 +900,21 @@ char* metadataDateTaken(TCHAR* fullPathToFile)
 		// Convert the property type from a WORD to a string.
 		PropertyTypeFromWORD(pPropBuffer[j].type, strPropertyType, MAX_PROPTYPE_SIZE);
 
-		printf("Property Item %d\n", j);
-		printf("  id: 0x%x\n", pPropBuffer[j].id);
-		wprintf(L"  type: %s\n", strPropertyType);
-		printf("  length: %d bytes\n\n", pPropBuffer[j].length);
+		//printf("Property Item %d\n", j);
+		//printf("  id: 0x%x\n", pPropBuffer[j].id);
+		//wprintf(L"  type: %s\n", strPropertyType);
+		//printf("  length: %d bytes\n\n", pPropBuffer[j].length);
 		
 		unsigned long int tagValue = pPropBuffer[j].id;
 
 		switch (tagValue)
 		{
 		case 0x9003:
-			printf("****Date and time when the original image data was generated(YYYY:MM:DD HH:MM:SS): %s.\n", pPropBuffer[j].value);
+			//printf("****Date and time when the original image data was generated(YYYY:MM:DD HH:MM:SS): %s.\n", pPropBuffer[j].value);
 			dateTaken = (char*)pPropBuffer[j].value;
 			break;
 		case 0x013B:
-			printf("***######***Who created the image: %s.\n", pPropBuffer[j].value);
+			//printf("***######***Who created the image: %s.\n", pPropBuffer[j].value);
 			break;
 		default:
 			break;
@@ -891,4 +934,47 @@ LPCSTR makeLPCSTR(CString str)
 	CStringA strA(str); // a helper string
 	LPCSTR newString = strA;
 	return newString;
+}
+
+
+void DisplayError(LPTSTR lpszFunction)
+// Routine Description:
+// Retrieve and output the system error message for the last-error code
+{
+	LPVOID lpMsgBuf;
+	LPVOID lpDisplayBuf;
+	DWORD dw = GetLastError();
+
+	FormatMessage(
+		FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		FORMAT_MESSAGE_FROM_SYSTEM |
+		FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL,
+		dw,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		(LPTSTR)&lpMsgBuf,
+		0,
+		NULL);
+
+	lpDisplayBuf =
+		(LPVOID)LocalAlloc(LMEM_ZEROINIT,
+		(lstrlen((LPCTSTR)lpMsgBuf)
+			+ lstrlen((LPCTSTR)lpszFunction)
+			+ 40) // account for format string
+			* sizeof(TCHAR));
+
+	if (FAILED(StringCchPrintf((LPTSTR)lpDisplayBuf,
+		LocalSize(lpDisplayBuf) / sizeof(TCHAR),
+		TEXT("%s failed with error code %d as follows:\n%s"),
+		lpszFunction,
+		dw,
+		lpMsgBuf)))
+	{
+		printf("FATAL ERROR: Unable to output error code.\n");
+	}
+
+	_tprintf(TEXT("ERROR: %s\n"), (LPCTSTR)lpDisplayBuf);
+
+	LocalFree(lpMsgBuf);
+	LocalFree(lpDisplayBuf);
 }
