@@ -22,10 +22,13 @@ public:
 	CString getStartPath();
 	void setLibRootPath(CString libRootPathStr);
 	CString getLibRootPath();
+	void setSortType(CString sortTypeStr);
+	CString getSortType();
 	std::vector <CString> getExtensionsArray();
 private:
 	std::vector <CString> extensionsArray;
 	CString startPath;
 	CString libRootpathStr;
+	CString sortTypeStr;
 };
 

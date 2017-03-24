@@ -48,6 +48,16 @@ CString CSettings::getLibRootPath()
 	return this->libRootpathStr;
 }
 
+void CSettings::setSortType(CString sortTypeStr)
+{
+	this->sortTypeStr = sortTypeStr;
+}
+
+
+CString CSettings::getSortType()
+{
+	return this->sortTypeStr;
+}
 
 std::vector <CString> CSettings::getExtensionsArray()
 {

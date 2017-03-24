@@ -16,8 +16,11 @@
 #include <Strsafe.h>
 #include <gdiplus.h>
 #include <comdef.h>  // you will need this
+#include <time.h>  
+#include <stdio.h> 
 #include "FilesDB.h"
 #include "Settings.h"
+
 
 using namespace std;
 using namespace Gdiplus;
@@ -189,42 +192,63 @@ int main(int argv, char* args[])
 			dayStr = strA;
 		}
 
-		// make new path 
-		CString newPath = rootPath + "\\" + yearCStr + "\\" + months[month] + "\\" + dayCStr;
+		CString newPath;
 
-		// if folder is not exists, make it
-		bool answerRezult = false;
-		LPCSTR newPathPtr = makeLPCSTR(newPath);
-		answerRezult = dirExists(newPathPtr);
-		if (!answerRezult)
+		// depending on type of sort orgonizing differently files in folders
+		CString sortType = appSettings.getSortType();
+
+		if (sortType.Compare(L"Y-M-D") == 0)
 		{
-			answerRezult = dirExists(makeLPCSTR(rootPath + "\\" + yearCStr));
+
+			//
+			// make new path 
+			//
+			newPath = rootPath + "\\" + yearCStr + "\\" + months[month] + "\\" + dayCStr;
+
+			// if folder is not exists, make it
+			bool answerRezult = false;
+			LPCSTR newPathPtr = makeLPCSTR(newPath);
+			answerRezult = dirExists(newPathPtr);
 			if (!answerRezult)
 			{
-				rezultBool = CreateDirectory(rootPath + "\\" + yearCStr, NULL);
+				answerRezult = dirExists(makeLPCSTR(rootPath + "\\" + yearCStr));
+				if (!answerRezult)
+				{
+					rezultBool = CreateDirectory(rootPath + "\\" + yearCStr, NULL);
+					if (!rezultBool)
+					{
+						printf("CreateDirectory failed (%d)\n", GetLastError());
+						return -1;
+					}
+				}
+				answerRezult = dirExists(makeLPCSTR(rootPath + "\\" + yearCStr + "\\" + months[month]));
+				if (!answerRezult)
+				{
+					rezultBool = CreateDirectory(rootPath + "\\" + yearCStr + "\\" + months[month], NULL);
+					if (!rezultBool)
+					{
+						printf("CreateDirectory failed (%d)\n", GetLastError());
+						return -1;
+					}
+				}
+				rezultBool = CreateDirectory(newPath, NULL);
 				if (!rezultBool)
 				{
 					printf("CreateDirectory failed (%d)\n", GetLastError());
 					return -1;
 				}
-			}
-			answerRezult = dirExists(makeLPCSTR(rootPath + "\\" + yearCStr + "\\" + months[month]));
-			if (!answerRezult)
-			{
-				rezultBool = CreateDirectory(rootPath + "\\" + yearCStr + "\\" + months[month], NULL);
-				if (!rezultBool)
-				{
-					printf("CreateDirectory failed (%d)\n", GetLastError());
-					return -1;
-				}
-			}
-			rezultBool = CreateDirectory(newPath, NULL);
-			if (!rezultBool)
-			{
-				printf("CreateDirectory failed (%d)\n", GetLastError());
-				return -1;
 			}
 		}
+
+		if(sortType.Compare(L"Y") == 0)
+		{
+			int t = 1;
+		}
+		else
+		{
+			return -1;
+		}
+
 
 		// move or copy file to new location
 		char *oldPath = nextFileMetadata.getFilePath();
@@ -363,7 +387,8 @@ int ReadIniFileToMemmory(CSettings *appSettings)
 	string partOfLine;
 	CString strExtensions = _T("[EXTENSIONS]");
 	CString strStartPath = _T("[STARTPATH]");	
-	CString strLibRootPath = _T("[LIBRARYROOT]");	
+	CString strLibRootPath = _T("[LIBRARYROOT]");
+	CString strSortType = _T("[SORTTYPE]");
 	CString value;
 	CString srtRighttPartOfLine;
 	bool bKeysFolder = false;
@@ -433,6 +458,18 @@ int ReadIniFileToMemmory(CSettings *appSettings)
 				{
 					CString csLine(line.c_str());
 					appSettings->setLibRootPath(csLine);
+				}
+			}
+
+			// check if it [SORTTYPE] section
+			if (strSortType.Compare(csLine) == 0)
+			{
+				// read next line with values
+				getline(standardFileRead, line);
+				if (line.length() != 0)
+				{
+					CString csLine(line.c_str());
+					appSettings->setSortType(csLine);
 				}
 			}
 		}
@@ -977,4 +1014,38 @@ void DisplayError(LPTSTR lpszFunction)
 
 	LocalFree(lpMsgBuf);
 	LocalFree(lpDisplayBuf);
+}
+
+
+ 
+
+struct tm newtime;
+__time32_t aclock;
+
+char* makeFileName(char* originalName)
+{
+	char buffer[32];
+	errno_t errNum;
+	_time32(&aclock);   // Get time in seconds.  
+	_localtime32_s(&newtime, &aclock);   // Convert time to struct tm form.  
+
+	// Print local time as a string.  
+
+	errNum = asctime_s(buffer, 32, &newtime);
+	if (errNum)
+	{
+		printf("Error code: %d", (int)errNum);
+		return "Error";
+	}
+
+
+	printf("Current date and time: %s", buffer);
+	printf("Full days from the begining of the year: %d\n", newtime.tm_yday);
+
+
+	// check how maky days from the begginnig of the year
+
+
+
+	return "Good";
 }
