@@ -28,6 +28,7 @@ using namespace Gdiplus;
 CString GetPathToExeFileFolder();
 int ReadIniFileToMemmory(CSettings *appSettings);
 bool dirExists(LPCSTR dirName_in);
+bool fileExists(LPCSTR fileName_in);
 void promtForStartPath(CSettings *appSettings);
 void promtForExtensions(CSettings *appSettings);
 void RecurseSearch(TCHAR* path, CSettings *appSettings, CFilesDB *photosDB);
@@ -36,17 +37,44 @@ HRESULT PropertyTypeFromWORD(WORD index, WCHAR* string, UINT maxChars);
 char* metadataDateTaken(TCHAR* fullPathToFile);
 LPCSTR makeLPCSTR(CString str);
 void DisplayError(LPTSTR lpszFunction);
+char* makeFileName(char* originalName);
+int calculateDayOfYear(int year, int month, int day);
 
 static int numberOfMediaFiles = 0;
 
+struct tm newtime;
+__time32_t aclock;
+
 CString months[] = { "Dummy", "January", "February" , "March", "April", "May", "June",
 				"July", "August", "September", "October", "November", "December" };
+
+int daysMonth[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+
 
 /***********************************************************************************************/
 /*	Main function of application My Photo Organizer                                            */
 /***********************************************************************************************/
 int main(int argv, char* args[])
 {
+	// we delete existing database file
+#if _DEBUG
+	// C:\DEVELOPMENT\CPP\MyPhotoOrganizer\MyPhotoOrganizer
+	LPCSTR dbFilePath = "C:\\DEVELOPMENT\\CPP\\MyPhotoOrganizer\\MyPhotoOrganizer\\Files.DB";
+	bool rezultBoolFile;
+	rezultBoolFile = fileExists(dbFilePath);	// bool dirExists(const std::string& dirName_in)
+	if (rezultBoolFile)
+	{
+		// delete the file
+		rezultBoolFile = DeleteFileA(dbFilePath);
+		if (!rezultBoolFile)
+		{
+			printf("Delete file failed (%d)\n", GetLastError());
+			return -1;
+		}
+	}
+
+#endif
+
 	// make database to store found files
 	CFilesDB photosDB = CFilesDB();
 	int rezult = photosDB.initializeDB();
@@ -89,6 +117,7 @@ int main(int argv, char* args[])
 	promtForExtensions(&appSettings);
 
 	//==============================================================================
+	
 	// print cirent settings for debug purpose
 	CString currentStartPath =  (LPCTSTR)appSettings.getStartPath();
 
@@ -156,9 +185,11 @@ int main(int argv, char* args[])
 		int year = 0;
 		int month = 0;
 		int day = 0;
+
 		LPCSTR yearStr;
 		LPCSTR monthStr;
 		LPCSTR dayStr;
+
 		CString yearCStr;
 		CString monthCStr;
 		CString dayCStr;
@@ -193,6 +224,15 @@ int main(int argv, char* args[])
 		}
 
 		CString newPath;
+		CString csFullNewPath;
+		CString csNewFileName;
+
+		char *oldPath = nextFileMetadata.getFilePath();
+		char *oldFileName = nextFileMetadata.getFileName();
+
+		CString csOldPath(oldPath);
+		CString csOldFileName(oldFileName);
+		CString csFullOldPath = csOldPath + L"\\" + csOldFileName;
 
 		// depending on type of sort orgonizing differently files in folders
 		CString sortType = appSettings.getSortType();
@@ -238,27 +278,58 @@ int main(int argv, char* args[])
 					return -1;
 				}
 			}
+
+
+			csNewFileName = csOldFileName;
+
+
 		}
+
+		//
+		// Another way of sort out files
+		//
 
 		if(sortType.Compare(L"Y") == 0)
 		{
-			int t = 1;
-		}
-		else
-		{
-			return -1;
-		}
+			//
+			// make new path 
+			//
+			newPath = rootPath + "\\" + yearCStr ;
 
+			// if folder is not exists, make it
+			bool answerRezult = false;
+			LPCSTR newPathPtr = makeLPCSTR(newPath);
+			answerRezult = dirExists(newPathPtr);
+			if (!answerRezult)
+			{
+				rezultBool = CreateDirectory(newPath, NULL);
+				if (!rezultBool)
+				{
+					printf("CreateDirectory failed (%d)\n", GetLastError());
+					return -1;
+				}
+			}
+
+			// make new file name
+			
+			// day number in a year
+			//  |  hour
+			//  |  |  seconds
+			//  |  |  |
+			// ###-##-####_imageName.ext
+
+			int dayNunInYear;
+			int hourInDay;
+			int secondInHour;
+			CString nameWithoutExt;
+
+			int dayOfYear = calculateDayOfYear(year, month, day);
+			char* newName = makeFileName(oldFileName);
+		}
 
 		// move or copy file to new location
-		char *oldPath = nextFileMetadata.getFilePath();
-		char *oldFileName = nextFileMetadata.getFileName();
 
-		CString csOldPath(oldPath);
-		CString csOldFileName(oldFileName);
-
-		CString csFullOldPath = csOldPath + L"\\" + csOldFileName;
-		CString csFullNewPath = newPath + L"\\" + csOldFileName;
+		csFullNewPath = newPath + L"\\" + csNewFileName;
 
 		if (CopyFile(csFullOldPath, csFullNewPath, FALSE))  // in LPCWSTR
 		{
@@ -374,6 +445,9 @@ int ReadIniFileToMemmory(CSettings *appSettings)
 	ifstream standardFileRead(pathToIniFile);
 	if (!standardFileRead.is_open())
 	{              
+		printf("Error: Cannot open settings file!\n");
+		system("pause");
+		return -1;
 	}
 	                               
 	OutputDebugString(_T("file open\n"));
@@ -502,6 +576,24 @@ bool dirExists(LPCSTR dirName_in)
 	return false;    // this is not a directory!
 }
 
+
+/***********************************************************************************************/
+/*	Utility function to check if the file is exists                                       */
+/***********************************************************************************************/
+bool fileExists(LPCSTR fileName_in)
+{
+	DWORD ftyp = GetFileAttributesA(fileName_in);
+	if (ftyp == INVALID_FILE_ATTRIBUTES)
+	{
+		cout << "Error: NO SUCH FILE!!!" << endl;
+		return false;  //something is wrong with your path!
+	}
+
+	if (ftyp & FILE_ATTRIBUTE_ARCHIVE)
+		return true;   // file exists!
+
+	return false;    // file not exists!
+}
 
 /***********************************************************************************************/
 /*	Show to the user existing start path from settings and ask new files extensions to search  */
@@ -1017,11 +1109,6 @@ void DisplayError(LPTSTR lpszFunction)
 }
 
 
- 
-
-struct tm newtime;
-__time32_t aclock;
-
 char* makeFileName(char* originalName)
 {
 	char buffer[32];
@@ -1048,4 +1135,35 @@ char* makeFileName(char* originalName)
 
 
 	return "Good";
+}
+
+int calculateDayOfYear(int year, int month, int day)
+{
+	int dayNumber = 0;
+	
+	for (int i = 0; i < month; i++)
+	{
+		dayNumber = dayNumber + daysMonth[i];
+	}
+
+	if (month > 2)
+	{
+		if (year % 4 == 0 && year % 100 != 0)
+		{
+			// leap year
+			dayNumber = dayNumber + 1;
+		}
+		else
+		{
+			if (year % 400 == 0)
+			{
+				// leap year
+				dayNumber = dayNumber + 1;
+			}
+		}
+	}
+
+	dayNumber = dayNumber + day;
+
+	return dayNumber;
 }
