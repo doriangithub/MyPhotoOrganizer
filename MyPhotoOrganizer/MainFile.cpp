@@ -185,22 +185,26 @@ int main(int argv, char* args[])
 		int year = 0;
 		int month = 0;
 		int day = 0;
+		int hour = 0;
+		int minutes = 0;
+		int seconds = 0;
 
-		LPCSTR yearStr;
-		LPCSTR monthStr;
-		LPCSTR dayStr;
+		//LPCSTR yearStr;
+		//LPCSTR monthStr;
+		//LPCSTR dayStr;
 
 		CString yearCStr;
 		CString monthCStr;
 		CString dayCStr;
+
 
 		tempCString = csNextFilePicTakenDate.Left(found);
 		year = _wtoi(tempCString);
 		if ( year > 1980 && year < 3000)
 		{
 			yearCStr = tempCString;
-			CStringA strA(tempCString);		// convert CString to LPCSTR
-			yearStr = strA;
+			//CStringA strA(tempCString);		// convert CString to LPCSTR
+			//yearStr = strA;
 		}
 		tempCStringRight = csNextFilePicTakenDate.Right(stringLength - found - 1);
 		found = tempCStringRight.Find(L":");
@@ -209,8 +213,8 @@ int main(int argv, char* args[])
 		month = _wtoi(tempCString);
 		if (month > 0 && month <= 12)
 		{
-			CStringA strA(tempCString);		// convert string CString to LPCSTR
-			monthStr = strA;
+			//CStringA strA(tempCString);		// convert string CString to LPCSTR
+			//monthStr = strA;
 		}
 		tempCStringRight = csNextFilePicTakenDate.Right(stringLength - found - 1);
 		found = tempCStringRight.Find(L" ");
@@ -219,10 +223,25 @@ int main(int argv, char* args[])
 		if (day > 0 && day <= 31)
 		{
 			dayCStr = tempCString;
-			CStringA strA(tempCString); // a helper string CString to LPCSTR
-			dayStr = strA;
+			//CStringA strA(tempCString); // a helper string CString to LPCSTR
+			//dayStr = strA;
 		}
 
+		tempCStringRight = csNextFilePicTakenDate.Right(stringLength - found - 4);
+		found = tempCStringRight.Find(L":");
+		tempCString = tempCStringRight.Left(found);
+		stringLength = tempCStringRight.GetLength();
+		hour = _wtoi(tempCString);
+
+		tempCStringRight = csNextFilePicTakenDate.Right(stringLength - found - 1);
+		found = tempCStringRight.Find(L":");
+		tempCString = tempCStringRight.Left(found);
+		stringLength = tempCStringRight.GetLength();
+		minutes = _wtoi(tempCString);
+
+		tempCString = csNextFilePicTakenDate.Right(stringLength - found - 1);
+		seconds = _wtoi(tempCString);
+		
 		CString newPath;
 		CString csFullNewPath;
 		CString csNewFileName;
@@ -318,14 +337,47 @@ int main(int argv, char* args[])
 			//  |  |  |
 			// ###-##-####_imageName.ext
 
-			int dayNunInYear;
-			int hourInDay;
-			int secondInHour;
+			int dayOfYear;
+			int secondsInHour;
+			
+			dayOfYear = calculateDayOfYear(year, month, day);
+			secondsInHour = minutes * 60 + seconds;
+			
+			CString dayOfYearCStr;
+			CString hourCStr;
+			CString secondsCStr;
 			CString nameWithoutExt;
 
-			int dayOfYear = calculateDayOfYear(year, month, day);
-			char* newName = makeFileName(oldFileName);
+			dayOfYearCStr.Format(L"%d", dayOfYear);
+			int lengsDays = dayOfYearCStr.GetLength();
+			while (lengsDays < 3)
+			{
+				dayOfYearCStr = "0" + dayOfYearCStr;
+				lengsDays = dayOfYearCStr.GetLength();
+			}
+
+			hourCStr.Format(L"%d", hour);
+			int lengsHours = hourCStr.GetLength();
+			while (lengsHours < 2)
+			{
+				hourCStr = "0" + hourCStr;
+				lengsHours = hourCStr.GetLength();
+			}
+
+			secondsCStr.Format(L"%d", secondsInHour);
+
+			int lengsSeconds = secondsCStr.GetLength();
+			while (lengsSeconds < 4)
+			{
+				secondsCStr = "0" + secondsCStr;
+				lengsSeconds = secondsCStr.GetLength();
+			}
+
+			csNewFileName = dayOfYearCStr + "-" + hourCStr + "-" + secondsCStr + "_" + csOldFileName;
+
 		}
+
+
 
 		// move or copy file to new location
 
@@ -1109,33 +1161,6 @@ void DisplayError(LPTSTR lpszFunction)
 }
 
 
-char* makeFileName(char* originalName)
-{
-	char buffer[32];
-	errno_t errNum;
-	_time32(&aclock);   // Get time in seconds.  
-	_localtime32_s(&newtime, &aclock);   // Convert time to struct tm form.  
-
-	// Print local time as a string.  
-
-	errNum = asctime_s(buffer, 32, &newtime);
-	if (errNum)
-	{
-		printf("Error code: %d", (int)errNum);
-		return "Error";
-	}
-
-
-	printf("Current date and time: %s", buffer);
-	printf("Full days from the begining of the year: %d\n", newtime.tm_yday);
-
-
-	// check how maky days from the begginnig of the year
-
-
-
-	return "Good";
-}
 
 int calculateDayOfYear(int year, int month, int day)
 {
