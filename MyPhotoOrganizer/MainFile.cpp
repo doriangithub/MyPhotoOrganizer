@@ -15,7 +15,7 @@
 #include <atlstr.h>
 #include <Strsafe.h>
 #include <gdiplus.h>
-#include <comdef.h>  // you will need this
+#include <comdef.h>  
 #include <time.h>  
 #include <stdio.h> 
 #include "FilesDB.h"
@@ -37,7 +37,6 @@ HRESULT PropertyTypeFromWORD(WORD index, WCHAR* string, UINT maxChars);
 char* metadataDateTaken(TCHAR* fullPathToFile);
 LPCSTR makeLPCSTR(CString str);
 void DisplayError(LPTSTR lpszFunction);
-char* makeFileName(char* originalName);
 int calculateDayOfYear(int year, int month, int day);
 
 static int numberOfMediaFiles = 0;
@@ -1023,7 +1022,7 @@ bool hasExtension(const WCHAR* fileName, CSettings *appSettings)
 
 
 /*********************************************************************************************/
-/*	 Helper function                                         */
+/*	 Helper function																	     */
 /*********************************************************************************************/
 HRESULT PropertyTypeFromWORD(WORD index, WCHAR* string, UINT maxChars)
 {
@@ -1047,6 +1046,9 @@ HRESULT PropertyTypeFromWORD(WORD index, WCHAR* string, UINT maxChars)
 }
 
 
+/*********************************************************************************************/
+/*	 Retrive metadata (date picture taken)													 */
+/*********************************************************************************************/
 char* metadataDateTaken(TCHAR* fullPathToFile)
 {
 	char* dateTaken = "";
@@ -1110,6 +1112,9 @@ char* metadataDateTaken(TCHAR* fullPathToFile)
 }
 
 
+/*********************************************************************************************/
+/*	 Convert STR to LPC									                                     */
+/*********************************************************************************************/
 LPCSTR makeLPCSTR(CString str)
 {
 	CStringA strA(str); // a helper string
@@ -1118,6 +1123,9 @@ LPCSTR makeLPCSTR(CString str)
 }
 
 
+/*********************************************************************************************/
+/*	 DisplayError																			 */
+/*********************************************************************************************/
 void DisplayError(LPTSTR lpszFunction)
 // Routine Description:
 // Retrieve and output the system error message for the last-error code
@@ -1161,7 +1169,9 @@ void DisplayError(LPTSTR lpszFunction)
 }
 
 
-
+/*********************************************************************************************/
+/*	 Calculate day number of the year														 */
+/*********************************************************************************************/
 int calculateDayOfYear(int year, int month, int day)
 {
 	int dayNumber = 0;
